@@ -194,8 +194,7 @@ ibus_hangul_engine_get_type (void)
 void
 ibus_hangul_init (IBusBus *bus)
 {
-    gboolean res;
-    GValue value = { 0, };
+    GVariant* value;
 
     hanja_table = hanja_table_load (NULL);
 
@@ -206,22 +205,22 @@ ibus_hangul_init (IBusBus *bus)
         g_object_ref_sink (config);
 
     hangul_keyboard = g_string_new_len ("2", 8);
-    res = ibus_config_get_value (config, "engine/Hangul",
-                                         "HangulKeyboard", &value);
-    if (res) {
-        const gchar* str = g_value_get_string (&value);
+    value = ibus_config_get_value (config, "engine/Hangul",
+                                         "HangulKeyboard");
+    if (value != NULL) {
+        const gchar* str = g_variant_get_string (value, NULL);
         g_string_assign (hangul_keyboard, str);
-        g_value_unset(&value);
+        g_variant_unref(value);
     }
 
     hanja_key_list_init(&hanja_keys);
 
-    res = ibus_config_get_value (config, "engine/Hangul",
-                                         "HanjaKeys", &value);
-    if (res) {
-        const gchar* str = g_value_get_string (&value);
+    value = ibus_config_get_value (config, "engine/Hangul",
+                                         "HanjaKeys");
+    if (value != NULL) {
+        const gchar* str = g_variant_get_string (value, NULL);
         hanja_key_list_set_from_string(&hanja_keys, str);
-        g_value_unset(&value);
+        g_variant_unref(value);
     } else {
 	hanja_key_list_append(&hanja_keys, IBUS_Hangul_Hanja, 0);
 	hanja_key_list_append(&hanja_keys, IBUS_F9, 0);
