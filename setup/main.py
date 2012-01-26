@@ -32,8 +32,8 @@ from keycapturedialog import KeyCaptureDialog
 _ = lambda a : gettext.dgettext(config.gettext_package, a)
 
 class Setup ():
-    def __init__ (self):
-        self.__bus = ibus.Bus()
+    def __init__ (self, bus):
+        self.__bus = bus
         self.__config = self.__bus.get_config()
 	self.__config.connect("value-changed", self.on_value_changed, None)
 
@@ -194,4 +194,13 @@ if __name__ == "__main__":
     locale.bindtextdomain(config.gettext_package, config.localedir)
     locale.bind_textdomain_codeset(config.gettext_package, "UTF-8")
 
-    Setup().run()
+    try:
+        bus = ibus.Bus()
+    except:
+        message = _("IBus daemon is not started")
+        dialog = gtk.MessageDialog(type = gtk.MESSAGE_ERROR,
+                                   buttons = gtk.BUTTONS_CLOSE,
+                                   message_format = message)
+        dialog.run()
+        sys.exit(1)
+    Setup(bus).run()
