@@ -43,6 +43,13 @@ desktop_DATA = ibus-setup-hangul.desktop
 desktopdir = $(datadir)/applications
 @INTLTOOL_DESKTOP_RULE@
 
+ibus-setup-hangul.desktop.in: ibus-setup-hangul.desktop.in.in
+	( \
+		pkgdatadir=${pkgdatadir}; \
+		s=`cat $<`; \
+		eval "echo \"$${s}\""; \
+	) > $@
+
 CLEANFILES = \
 	ibus-setup-hangul \
 	config.py \
@@ -53,7 +60,7 @@ CLEANFILES = \
 EXTRA_DIST = \
 	config.py.in \
 	ibus-setup-hangul.in \
-	ibus-setup-hangul.desktop.in \
+	ibus-setup-hangul.desktop.in.in \
 	$(NULL)
 
 test:
