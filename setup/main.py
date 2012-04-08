@@ -20,9 +20,9 @@
 
 import sys
 import os
-import gobject
-import gtk
-import ibus
+from gi.repository import GLib
+from gi.repository import Gtk
+from gi.repository import IBus
 import locale
 import gettext
 import config
@@ -38,7 +38,7 @@ class Setup ():
 	self.__config.connect("value-changed", self.on_value_changed, None)
 
 	ui_file = os.path.join(os.path.dirname(__file__), "setup.ui")
-	self.__builder = gtk.Builder()
+	self.__builder = Gtk.Builder()
 	self.__builder.set_translation_domain(config.gettext_package)
 	self.__builder.add_from_file(ui_file)
 
@@ -47,7 +47,7 @@ class Setup ():
 	list = pipe.communicate()[0].split('\n')
 	
 	self.__hangul_keyboard = self.__builder.get_object("HangulKeyboard")
-	model = gtk.ListStore(str, str, int)
+	model = Gtk.ListStore(str, str, int)
 	i = 0
 	for line in list:
 	    items = line.split('\t')
@@ -56,11 +56,12 @@ class Setup ():
 		i+=1
 
 	self.__hangul_keyboard.set_model(model)
-	renderer = gtk.CellRendererText()
-	self.__hangul_keyboard.pack_start(renderer)
+	renderer = Gtk.CellRendererText()
+	self.__hangul_keyboard.pack_start(renderer, True)
 	self.__hangul_keyboard.add_attribute(renderer, "text", 0)
 
-	current = self.__read("HangulKeyboard", "2")
+	default = GLib.Variant.new_string("2")
+	current = self.__read("HangulKeyboard", default).get_string()
 	for i in model:
 	    if i[1] == current:
 		self.__hangul_keyboard.set_active(i[2])
@@ -68,11 +69,13 @@ class Setup ():
 
 	self.__word_commit = self.__builder.get_object("WordCommit")
 
-	word_commit = self.__read("WordCommit", False)
+	default = GLib.Variant.new_boolean(False)
+	word_commit = self.__read("WordCommit", default).get_boolean()
         self.__word_commit.set_active(word_commit)
 
 	self.__auto_reorder = self.__builder.get_object("AutoReorder")
-	auto_reorder = self.__read("AutoReorder", True)
+	default = GLib.Variant.new_boolean(True)
+	auto_reorder = self.__read("AutoReorder", default).get_boolean()
         self.__auto_reorder.set_active(auto_reorder)
 
 	# hanja tab
@@ -82,19 +85,20 @@ class Setup ():
 	button = self.__builder.get_object("HanjaKeyListRemoveButton")
 	button.connect("clicked", self.on_hanja_key_remove, None)
 
-	model = gtk.ListStore(str)
+	model = Gtk.ListStore(str)
 
-	keylist_str = self.__read("HanjaKeys", "Hangul_Hanja,F9")
+	default = GLib.Variant.new_string("Hangul_Hanja,F9")
+	keylist_str = self.__read("HanjaKeys", default).get_string()
 	self.__hanja_key_list_str = keylist_str.split(',')
 	for i in self.__hanja_key_list_str:
 	    model.append([i])
 
 	self.__hanja_key_list = self.__builder.get_object("HanjaKeyList")
 	self.__hanja_key_list.set_model(model)
-	column = gtk.TreeViewColumn()
+	column = Gtk.TreeViewColumn()
 	column.set_title("key")
-	renderer = gtk.CellRendererText()
-	column.pack_start(renderer)
+	renderer = Gtk.CellRendererText()
+	column.pack_start(renderer, True)
 	column.add_attribute(renderer, "text", 0)
 	self.__hanja_key_list.append_column(column)
 
@@ -115,17 +119,17 @@ class Setup ():
 
     def run(self):
 	res = self.__window.run()
-	if (res == gtk.RESPONSE_OK):
+	if (res == Gtk.ResponseType.OK):
 	    self.on_ok()
 	self.__window.destroy()
 
     def apply(self):
 	model = self.__hangul_keyboard.get_model()
 	i = self.__hangul_keyboard.get_active()
-	self.__write("HangulKeyboard", model[i][1])
+	self.__write("HangulKeyboard", GLib.Variant.new_string(model[i][1]))
 
         word_commit = self.__word_commit.get_active()
-        self.__write("WordCommit", word_commit)
+        self.__write("WordCommit", GLib.Variant.new_boolean(word_commit))
 
 	model = self.__hanja_key_list.get_model()
 	str = ""
@@ -137,13 +141,13 @@ class Setup ():
 	    else:
 		str += model.get_value(iter, 0)
 	    iter = model.iter_next(iter)
-	self.__write("HanjaKeys", str)
+	self.__write("HanjaKeys", GLib.Variant.new_string(str))
 
     def on_response(self, widget, id, data = None):
-	if id == gtk.RESPONSE_APPLY:
+	if id == Gtk.ResponseType.APPLY:
 	    self.apply()
 	    widget.emit_stop_by_name("response")
-	if id == gtk.RESPONSE_NONE:
+	if id == Gtk.ResponseType.NONE:
 	    widget.emit_stop_by_name("response")
 
     def on_ok(self):
@@ -152,7 +156,7 @@ class Setup ():
     def on_hanja_key_add(self, widget, data = None):
 	dialog = KeyCaptureDialog(_("Select Hanja key"), self.__window)
 	res = dialog.run()
-	if res == gtk.RESPONSE_OK:
+	if res == Gtk.ResponseType.OK:
 	    key_str = dialog.get_key_string()
 	    if len(key_str) > 0:
 		model = self.__hanja_key_list.get_model()
@@ -185,7 +189,10 @@ class Setup ():
 		self.__hanja_key_list_str = value.split(',')
 
     def __read(self, name, v):
-        return self.__config.get_value("engine/Hangul", name, v)
+        value = self.__config.get_value("engine/Hangul", name)
+        if value is None:
+            return v
+        return value
 
     def __write(self, name, v):
         return self.__config.set_value("engine/Hangul", name, v)
@@ -194,13 +201,13 @@ if __name__ == "__main__":
     locale.bindtextdomain(config.gettext_package, config.localedir)
     locale.bind_textdomain_codeset(config.gettext_package, "UTF-8")
 
-    try:
-        bus = ibus.Bus()
-    except:
+    bus = IBus.Bus()
+    if bus.is_connected():
+        Setup(bus).run()
+    else:
         message = _("IBus daemon is not started")
-        dialog = gtk.MessageDialog(type = gtk.MESSAGE_ERROR,
-                                   buttons = gtk.BUTTONS_CLOSE,
+        dialog = Gtk.MessageDialog(type = Gtk.MessageType.ERROR,
+                                   buttons = Gtk.ButtonsType.CLOSE,
                                    message_format = message)
         dialog.run()
         sys.exit(1)
-    Setup(bus).run()

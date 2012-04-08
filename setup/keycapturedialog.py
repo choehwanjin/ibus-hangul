@@ -1,5 +1,5 @@
-import gtk
-import gtk.gdk as gdk
+from gi.repository import Gtk
+from gi.repository import Gdk
 import gettext
 
 _ = lambda a : gettext.dgettext("ibus-hangul", a)
@@ -7,10 +7,10 @@ _ = lambda a : gettext.dgettext("ibus-hangul", a)
 class KeyCaptureDialog ():
     def __init__ (self, title, parent):
 	self.__key_str = ''
-	self.__dialog = gtk.MessageDialog(parent,
-			gtk.DIALOG_MODAL,
-			gtk.MESSAGE_INFO,
-			gtk.BUTTONS_OK_CANCEL,
+	self.__dialog = Gtk.MessageDialog(parent,
+			Gtk.DialogFlags.MODAL,
+			Gtk.MessageType.INFO,
+			Gtk.ButtonsType.OK_CANCEL,
 			"")
 	self.__dialog.set_markup(_("Press any key which you want to use as hanja key. "
                 "The key you pressed is displayed below.\n"
@@ -30,13 +30,13 @@ class KeyCaptureDialog ():
 
     def on_keypress(self, widget, event, data = None):
 	self.__key_str = ""
-	if event.state & gdk.CONTROL_MASK :
+	if event.state & Gdk.ModifierType.CONTROL_MASK :
 	    self.__key_str += "Control+"
-	if event.state & gdk.MOD1_MASK :
+	if event.state & Gdk.ModifierType.MOD1_MASK :
 	    self.__key_str += "Alt+"
-	if event.state & gdk.SHIFT_MASK :
+	if event.state & Gdk.ModifierType.SHIFT_MASK :
 	    self.__key_str += "Shift+"
 
-	self.__key_str += gdk.keyval_name(event.keyval)
+	self.__key_str += Gdk.keyval_name(event.keyval)
 	    
 	self.__dialog.format_secondary_markup('<span size="large" weight="bold">%s</span>' % self.__key_str)
