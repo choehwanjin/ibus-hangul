@@ -35,7 +35,6 @@ class Setup ():
     def __init__ (self, bus):
         self.__bus = bus
         self.__config = self.__bus.get_config()
-        self.__config.connect("value-changed", self.on_value_changed, None)
 
         ui_file = os.path.join(os.path.dirname(__file__), "setup.ui")
         self.__builder = gtk.Builder()
@@ -112,6 +111,8 @@ class Setup ():
 
         ok_button = self.__builder.get_object("button_cancel")
         ok_button.grab_focus()
+
+        self.__config.connect("value-changed", self.on_value_changed, None)
 
     def run(self):
         res = self.__window.run()
