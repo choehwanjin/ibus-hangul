@@ -1,6 +1,5 @@
 setup/keycapturedialog.py
 setup/main.py
-setup/ibus-setup-hangul.desktop.in
 [type: gettext/glade]setup/setup.ui
 src/engine.c
 src/main.c
