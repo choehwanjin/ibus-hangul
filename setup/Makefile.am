@@ -38,11 +38,6 @@ hangul_keyboard_list_SOURCES = hangul_keyboard_list.c
 hangul_keyboard_list_CFLAGS = $(HANGUL_CFLAGS)
 hangul_keyboard_list_LDADD = $(HANGUL_LIBS)
 
-desktop_in_files = ibus-setup-hangul.desktop.in
-desktop_DATA = ibus-setup-hangul.desktop
-desktopdir = $(datadir)/applications
-@INTLTOOL_DESKTOP_RULE@
-
 hicolor_icon_64_DATA = ibus-setup-hangul.png
 hicolor_icon_64dir = $(datadir)/icons/hicolor/64x64/apps
 
@@ -53,13 +48,11 @@ CLEANFILES = \
 	ibus-setup-hangul \
 	config.py \
 	*.pyc \
-	ibus-setup-hangul.desktop \
 	$(NULL)
 
 EXTRA_DIST = \
 	config.py.in \
 	ibus-setup-hangul.in \
-	ibus-setup-hangul.desktop.in \
 	$(hicolor_icon_64_DATA) \
 	$(hicolor_icon_scalable_DATA) \
 	$(NULL)
