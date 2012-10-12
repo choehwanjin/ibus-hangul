@@ -4,6 +4,7 @@ _Name=IBus Hangul Preferences
 _Comment=Set IBus Hangul Preferences
 Exec=ibus-setup-hangul
 Icon=ibus-setup-hangul
+NoDisplay=true
 Terminal=false
 Type=Application
 StartupNotify=true
