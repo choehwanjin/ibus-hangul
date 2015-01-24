@@ -208,6 +208,9 @@ static gboolean word_commit = FALSE;
 static gboolean auto_reorder = TRUE;
 static int initial_input_mode = INPUT_MODE_DIRECT;
 
+static IBusProperty *_prop = NULL;
+static gboolean _does_ibus_commit_preedit_text_before_reset = FALSE;
+
 static glong
 ucschar_strlen (const ucschar* str)
 {
@@ -338,6 +341,13 @@ ibus_hangul_init (IBusBus *bus)
     value = ibus_config_get_value (config, "panel", "lookup-table-orientation");
     if (value != NULL) {
         lookup_table_orientation = g_variant_get_int32(value);
+        g_variant_unref (value);
+    }
+
+    value = ibus_bus_get_ibus_property (bus, "CommitPreeditTextBeforeResettingIM");
+    if (value != NULL) {
+        _does_ibus_commit_preedit_text_before_reset = g_variant_get_boolean (value);
+        g_variant_unref (value);
     }
 
     keymap = ibus_keymap_get("us");
@@ -1272,7 +1282,18 @@ ibus_hangul_engine_reset (IBusEngine *engine)
 {
     IBusHangulEngine *hangul = (IBusHangulEngine *) engine;
 
-    ibus_hangul_engine_flush (hangul);
+    if (_does_ibus_commit_preedit_text_before_reset) {
+        ibus_hangul_engine_hide_lookup_table (hangul);
+        hangul_ic_reset (hangul->context);
+
+        if (ustring_length (hangul->preedit) != 0)
+            ustring_clear(hangul->preedit);
+
+        ibus_hangul_engine_update_preedit_text (hangul);
+    } else {
+        ibus_hangul_engine_flush (hangul);
+    }
+
     parent_class->reset (engine);
 }
 
