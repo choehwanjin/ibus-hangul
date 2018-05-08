@@ -20,6 +20,7 @@
 
 import sys
 import os
+from gi.repository import Gio
 from gi.repository import GLib
 from gi.repository import Gtk
 from gi.repository import IBus
@@ -53,8 +54,8 @@ def get_hangul_keyboard_list():
 class Setup ():
     def __init__ (self, bus):
         self.__bus = bus
-        self.__config = self.__bus.get_config()
-        self.__config.connect("value-changed", self.on_value_changed, None)
+        self.__settings = Gio.Settings(schema="org.freedesktop.ibus.engine.hangul")
+        self.__settings.connect("changed", self.on_value_changed)
 
         ui_file = os.path.join(os.path.dirname(__file__), "setup.ui")
         self.__builder = Gtk.Builder()
@@ -76,26 +77,22 @@ class Setup ():
         self.__hangul_keyboard.pack_start(renderer, True)
         self.__hangul_keyboard.add_attribute(renderer, "text", 0)
 
-        default = GLib.Variant.new_string("2")
-        current = self.__read("hangul-keyboard", default).get_string()
+        current = self.__read("hangul-keyboard").get_string()
         for i in model:
             if i[1] == current:
                 self.__hangul_keyboard.set_active(i[2])
                 break
 
         self.__start_in_hangul_mode = self.__builder.get_object("StartInHangulMode")
-        default = GLib.Variant.new_string("latin")
-        initial_input_mode = self.__read("initial-input-mode", default).get_string()
+        initial_input_mode = self.__read("initial-input-mode").get_string()
         self.__start_in_hangul_mode.set_active(initial_input_mode == "hangul")
 
         self.__word_commit = self.__builder.get_object("WordCommit")
-        default = GLib.Variant.new_boolean(False)
-        word_commit = self.__read("word-commit", default).get_boolean()
+        word_commit = self.__read("word-commit").get_boolean()
         self.__word_commit.set_active(word_commit)
 
         self.__auto_reorder = self.__builder.get_object("AutoReorder")
-        default = GLib.Variant.new_boolean(True)
-        auto_reorder = self.__read("auto-reorder", default).get_boolean()
+        auto_reorder = self.__read("auto-reorder").get_boolean()
         self.__auto_reorder.set_active(auto_reorder)
 
         button = self.__builder.get_object("HangulKeyListAddButton")
@@ -106,8 +103,7 @@ class Setup ():
 
         model = Gtk.ListStore(str)
 
-        default = GLib.Variant.new_string("Hangul,Shift+space")
-        keylist_str = self.__read("switch-keys", default).get_string()
+        keylist_str = self.__read("switch-keys").get_string()
         self.__hangul_key_list_str = keylist_str.split(',')
         for i in self.__hangul_key_list_str:
             model.append([i])
@@ -130,8 +126,7 @@ class Setup ():
 
         model = Gtk.ListStore(str)
 
-        default = GLib.Variant.new_string("Hangul_Hanja,F9")
-        keylist_str = self.__read("hanja-keys", default).get_string()
+        keylist_str = self.__read("hanja-keys").get_string()
         self.__hanja_key_list_str = keylist_str.split(',')
         for i in self.__hanja_key_list_str:
             model.append([i])
@@ -270,31 +265,31 @@ class Setup ():
         if model and iter:
             model.remove(iter)
 
-    def on_value_changed(self, config, section, name, value, data):
-        if section == "engine/Hangul":
-            if name == "hangul-keyboard":
-                model = self.__hangul_keyboard.get_model()
-                for i in model:
-                    if i[1] == value:
-                        self.__hangul_keyboard.set_active(i[2])
-                        break
-            elif name == "switch-keys":
-                self.__hangul_key_list_str = value.split(',')
-            elif name == "hanja-keys":
-                self.__hanja_key_list_str = value.split(',')
+    def on_value_changed(self, settings, key):
+        value = settings.get_value(key)
+        if key == "hangul-keyboard":
+            model = self.__hangul_keyboard.get_model()
+            for i in model:
+                if i[1] == value.get_string():
+                    self.__hangul_keyboard.set_active(i[2])
+                    break
+        elif key == "switch-keys":
+            self.__hangul_key_list_str = value.get_string().split(',')
+        elif key == "hanja-keys":
+            self.__hanja_key_list_str = value.get_string().split(',')
 
-    def __read(self, name, v):
-        value = self.__config.get_value("engine/hangul", name)
-        if value is None:
-            return v
-        return value
+    def __read(self, key):
+        return self.__settings.get_value(key)
 
-    def __write(self, name, v):
-        return self.__config.set_value("engine/Hangul", name, v)
+    def __write(self, key, v):
+        self.__settings.set_value(key, v)
 
 if __name__ == "__main__":
     locale.bindtextdomain(config.gettext_package, config.localedir)
     gettext.bind_textdomain_codeset(config.gettext_package, "UTF-8")
+
+    GLib.set_prgname("ibus-setup-hangul")
+    GLib.set_application_name(_("IBusHangul Setup"))
 
     bus = IBus.Bus()
     if bus.is_connected():

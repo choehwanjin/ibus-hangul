@@ -16,26 +16,33 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: ../setup/keycapturedialog.py:15
-msgid ""
-"Press any key which you want to use as hanja key. The key you pressed is "
-"displayed below.\n"
-"If you want to use it, click \"Ok\" or click \"Cancel\""
-msgstr ""
-"한자키로 사용하고자 하는 키를 입력하십시오. 그러면 그 키가 아래에 표시됩니"
-"다.\n"
-"그 키를 사용하시려면 \"확인\"을 누르시고, 사용하지 않으시려면 \"취소\"를누르"
-"십시오."
-
-#: ../setup/main.py:204
+#: ../setup/main.py:220
 msgid "Select Hangul toggle key"
 msgstr "한영전환키를 선택하시오"
+
+#: ../setup/main.py:221
+msgid ""
+"Press any key which you want to use as hangul toggle key. The key you "
+"pressed is displayed below.\n"
+"If you want to use it, click \"Ok\" or click \"Cancel\""
+msgstr ""
+"한글키로 사용하고자 하는 키를 입력하십시오. 그러면 그 키가 아래에 표시됩니다.\n"
+"그 키를 사용하시려면 \"확인\"을 누르시고, 사용하지 않으시려면 \"취소\"를 누르십시오."
 
 #: ../setup/main.py:228
 msgid "Select Hanja key"
 msgstr "한자키를 선택하시오"
 
-#: ../setup/main.py:281
+#: ../setup/main.py:248
+msgid ""
+"Press any key which you want to use as hanja key. The key you pressed is "
+"displayed below.\n"
+"If you want to use it, click \"Ok\" or click \"Cancel\""
+msgstr ""
+"한자키로 사용하고자 하는 키를 입력하십시오. 그러면 그 키가 아래에 표시됩니다.\n"
+"그 키를 사용하시려면 \"확인\"을 누르시고, 사용하지 않으시려면 \"취소\"를 누르십시오."
+
+#: ../setup/main.py:303
 msgid ""
 "IBus daemon is not running.\n"
 "Hangul engine settings cannot be saved."
@@ -68,7 +75,7 @@ msgid "<b>Etc</b>"
 msgstr "<b>기타</b>"
 
 #: ../setup/setup.ui.h:5
-msgid "Start in _hangul mode"
+msgid "Start in _Hangul mode"
 msgstr "한글 모드로 시작(_H)"
 
 #: ../setup/setup.ui.h:6
@@ -80,7 +87,7 @@ msgid "Automatic _reordering"
 msgstr "자동 순서 교정(_R)"
 
 #: ../setup/setup.ui.h:8
-msgid "<b>Hangul toggle key</b>"
+msgid "<b>Hangul Toggle Key</b>"
 msgstr "<b>한영전환키</b>"
 
 #: ../setup/setup.ui.h:9
@@ -88,7 +95,7 @@ msgid "Hangul"
 msgstr "한글"
 
 #: ../setup/setup.ui.h:10
-msgid "<b>Hanja key</b>"
+msgid "<b>Hanja Key</b>"
 msgstr "<b>한자키</b>"
 
 #: ../setup/setup.ui.h:11

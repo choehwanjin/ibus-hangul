@@ -19,12 +19,31 @@
 # Free Software Foundation, Inc., 59 Temple Place, Suite 330,
 # Boston, MA  02111-1307  USA
 
+schemas_DATA = \
+	org.freedesktop.ibus.engine.hangul.gschema.xml
+	$(NULL)
+
+schemasdir = $(datadir)/glib-2.0/schemas
+
 symboltable_DATA = \
 	symbol.txt \
 	$(NULL)
 
 symboltabledir = $(datadir)/ibus-hangul/data
 
+install-data-hook:
+	if test -z "$(DESTDIR)"; then \
+	    glib-compile-schemas $(schemasdir); \
+	fi
+
+uninstall-hook:
+	SCHEMAS_FILES=`ls $(schemasdir)/*.gschema.xml` || true;         \
+	if test -z "$$SCHEMAS_FILES" &&                                 \
+	    test -f $(schemasdir)/gschemas.compiled; then               \
+	    rm $(schemasdir)/gschemas.compiled;                         \
+	fi
+
 EXTRA_DIST = \
+	$(schemas_DATA) \
 	$(symboltable_DATA) \
 	$(NULL)

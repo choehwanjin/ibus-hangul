@@ -23,6 +23,7 @@
 #endif
 
 #include <ibus.h>
+#include <gio/gio.h>
 #include <hangul.h>
 #include <string.h>
 #include <ctype.h>
@@ -163,10 +164,8 @@ static bool ibus_hangul_engine_on_transition
                                              const ucschar          *preedit,
                                              void                   *data);
 
-static void ibus_config_value_changed       (IBusConfig             *config,
-                                             const gchar            *section,
-                                             const gchar            *name,
-                                             GVariant               *value,
+static void        settings_changed         (GSettings              *settings,
+                                             const gchar            *key,
                                              gpointer                user_data);
 
 static void        lookup_table_set_visible (IBusLookupTable        *table,
@@ -196,7 +195,8 @@ static glong ucschar_strlen (const ucschar* str);
 static IBusEngineClass *parent_class = NULL;
 static HanjaTable *hanja_table = NULL;
 static HanjaTable *symbol_table = NULL;
-static IBusConfig *config = NULL;
+static GSettings *settings_hangul = NULL;
+static GSettings *settings_panel = NULL;
 static GString    *hangul_keyboard = NULL;
 static HotkeyList hanja_keys;
 static HotkeyList switch_keys;
@@ -248,90 +248,82 @@ ibus_hangul_engine_get_type (void)
 void
 ibus_hangul_init (IBusBus *bus)
 {
-    GVariant* value;
+    GVariant* value = NULL;
 
     hanja_table = hanja_table_load (NULL);
 
     symbol_table = hanja_table_load (IBUSHANGUL_DATADIR "/data/symbol.txt");
 
-    config = ibus_bus_get_config (bus);
-    if (config)
-        g_object_ref_sink (config);
+    settings_hangul = g_settings_new ("org.freedesktop.ibus.engine.hangul");
+    settings_panel = g_settings_new ("org.freedesktop.ibus.panel");
 
-    hangul_keyboard = g_string_new_len ("2", 8);
-    value = ibus_config_get_value (config, "engine/hangul",
-                                         "hangul-keyboard");
+    hangul_keyboard = g_string_new_len (NULL, 8);
+    value = g_settings_get_value (settings_hangul, "hangul-keyboard");
     if (value != NULL) {
         const gchar* str = g_variant_get_string (value, NULL);
         g_string_assign (hangul_keyboard, str);
-        g_variant_unref(value);
+        g_clear_pointer (&value, g_variant_unref);
     }
 
     hotkey_list_init(&switch_keys);
 
-    value = ibus_config_get_value (config, "engine/hangul",
-                                         "switch-keys");
+    value = g_settings_get_value (settings_hangul, "switch-keys");
     if (value != NULL) {
         const gchar* str = g_variant_get_string (value, NULL);
         hotkey_list_set_from_string(&switch_keys, str);
-        g_variant_unref(value);
+        g_clear_pointer (&value, g_variant_unref);
     } else {
-	hotkey_list_append(&switch_keys, IBUS_Hangul, 0);
-	hotkey_list_append(&switch_keys, IBUS_space, IBUS_SHIFT_MASK);
+        hotkey_list_append(&switch_keys, IBUS_Hangul, 0);
+        hotkey_list_append(&switch_keys, IBUS_space, IBUS_SHIFT_MASK);
     }
 
     hotkey_list_init(&hanja_keys);
 
-    value = ibus_config_get_value (config, "engine/hangul",
-                                         "hanja-keys");
+    value = g_settings_get_value (settings_hangul, "hanja-keys");
     if (value != NULL) {
         const gchar* str = g_variant_get_string (value, NULL);
         hotkey_list_set_from_string(&hanja_keys, str);
-        g_variant_unref(value);
+        g_clear_pointer (&value, g_variant_unref);
     } else {
-	hotkey_list_append(&hanja_keys, IBUS_Hangul_Hanja, 0);
-	hotkey_list_append(&hanja_keys, IBUS_F9, 0);
+        hotkey_list_append(&hanja_keys, IBUS_Hangul_Hanja, 0);
+        hotkey_list_append(&hanja_keys, IBUS_F9, 0);
     }
 
     hotkey_list_init (&on_keys);
-    value = ibus_config_get_value (config, "engine/hangul", "on-keys");
+    value = g_settings_get_value (settings_hangul, "on-keys");
     if (value != NULL) {
         const gchar* str = g_variant_get_string (value, NULL);
         hotkey_list_set_from_string (&on_keys, str);
-        g_variant_unref (value);
-    } else {
+        g_clear_pointer (&value, g_variant_unref);
     }
 
     hotkey_list_init (&off_keys);
-    value = ibus_config_get_value (config, "engine/hangul", "off-keys");
+    value = g_settings_get_value (settings_hangul, "off-keys");
     if (value != NULL) {
         const gchar* str = g_variant_get_string (value, NULL);
         hotkey_list_set_from_string (&off_keys, str);
-        g_variant_unref (value);
-    } else {
-        hotkey_list_append (&off_keys, IBUS_KEY_Escape, 0);
+        g_clear_pointer (&value, g_variant_unref);
     }
 
-    value = ibus_config_get_value (config, "engine/hangul",
-                                         "word-commit");
+    value = g_settings_get_value (settings_hangul, "word-commit");
     if (value != NULL) {
         word_commit = g_variant_get_boolean (value);
-        g_variant_unref(value);
+        g_clear_pointer (&value, g_variant_unref);
     }
 
-    value = ibus_config_get_value (config, "engine/hangul", "auto-reorder");
+    value = g_settings_get_value (settings_hangul, "auto-reorder");
     if (value != NULL) {
         auto_reorder = g_variant_get_boolean (value);
-        g_variant_unref (value);
+        g_clear_pointer (&value, g_variant_unref);
     }
 
-    value = ibus_config_get_value (config, "engine/hangul", "disable-latin-mode");
+    value = g_settings_get_value (settings_hangul, "disable-latin-mode");
     if (value != NULL) {
         disable_latin_mode = g_variant_get_boolean (value);
-        g_variant_unref (value);
+        g_clear_pointer (&value, g_variant_unref);
     }
 
-    value = ibus_config_get_value (config, "engine/hangul", "initial-input-mode");
+    value = g_settings_get_value (settings_hangul, "initial-input-mode");
     if (value != NULL) {
         const gchar* str = g_variant_get_string (value, NULL);
         if (strcmp(str, "latin") == 0) {
@@ -339,13 +331,13 @@ ibus_hangul_init (IBusBus *bus)
         } else if (strcmp(str, "hangul") == 0) {
             initial_input_mode = INPUT_MODE_HANGUL;
         }
-        g_variant_unref (value);
+        g_clear_pointer (&value, g_variant_unref);
     }
 
-    value = ibus_config_get_value (config, "panel", "lookup-table-orientation");
+    value = g_settings_get_value (settings_panel, "lookup-table-orientation");
     if (value != NULL) {
         lookup_table_orientation = g_variant_get_int32(value);
-        g_variant_unref (value);
+        g_clear_pointer (&value, g_variant_unref);
     }
 
     keymap = ibus_keymap_get("us");
@@ -370,8 +362,8 @@ ibus_hangul_exit (void)
     hanja_table_delete (symbol_table);
     symbol_table = NULL;
 
-    g_object_unref (config);
-    config = NULL;
+    g_clear_object (&settings_hangul);
+    g_clear_object (&settings_panel);
 
     g_string_free (hangul_keyboard, TRUE);
     hangul_keyboard = NULL;
@@ -474,8 +466,10 @@ ibus_hangul_engine_init (IBusHangulEngine *hangul)
     hangul->table = ibus_lookup_table_new (9, 0, TRUE, FALSE);
     g_object_ref_sink (hangul->table);
 
-    g_signal_connect (config, "value-changed",
-                      G_CALLBACK(ibus_config_value_changed), hangul);
+    g_signal_connect (settings_hangul, "changed",
+                      G_CALLBACK (settings_changed), hangul);
+    g_signal_connect (settings_panel, "changed",
+                      G_CALLBACK (settings_changed), hangul);
 }
 
 static GObject*
@@ -1519,41 +1513,50 @@ ibus_hangul_engine_on_transition (HangulInputContext     *hic,
 }
 
 static void
-ibus_config_value_changed (IBusConfig   *config,
-                           const gchar  *section,
-                           const gchar  *name,
-                           GVariant     *value,
-                           gpointer      user_data)
+settings_changed (GSettings    *settings,
+                  const gchar  *key,
+                  gpointer      user_data)
 {
     IBusHangulEngine *hangul = (IBusHangulEngine *) user_data;
+    GValue schema_value = G_VALUE_INIT;
+    const gchar *schema_id;
+    GVariant *value;
 
-    if (strcmp(section, "engine/hangul") == 0) {
-        if (strcmp(name, "hangul-keyboard") == 0) {
+    g_return_if_fail (G_IS_SETTINGS (settings));
+
+    g_value_init (&schema_value, G_TYPE_STRING);
+    g_object_get_property (G_OBJECT (settings), "schema-id", &schema_value);
+    schema_id = g_value_get_string (&schema_value);
+    value = g_settings_get_value (settings, key);
+    if (strcmp (schema_id, "org.freedesktop.ibus.engine.hangul") == 0) {
+        if (strcmp(key, "hangul-keyboard") == 0) {
             const gchar *str = g_variant_get_string(value, NULL);
             g_string_assign (hangul_keyboard, str);
             hangul_ic_select_keyboard (hangul->context, hangul_keyboard->str);
-        } else if (strcmp(name, "hanja-keys") == 0) {
+        } else if (strcmp (key, "hanja-keys") == 0) {
             const gchar* str = g_variant_get_string(value, NULL);
 	    hotkey_list_set_from_string(&hanja_keys, str);
-        } else if (strcmp(name, "word-commit") == 0) {
+        } else if (strcmp (key, "word-commit") == 0) {
             word_commit = g_variant_get_boolean (value);
-        } else if (strcmp (name, "auto-reorder") == 0) {
+        } else if (strcmp (key, "auto-reorder") == 0) {
             auto_reorder = g_variant_get_boolean (value);
-        } else if (strcmp (name, "switch-keys") == 0) {
+        } else if (strcmp (key, "switch-keys") == 0) {
             const gchar* str = g_variant_get_string(value, NULL);
 	    hotkey_list_set_from_string(&switch_keys, str);
-        } else if (strcmp (name, "on-keys") == 0) {
+        } else if (strcmp (key, "on-keys") == 0) {
             const gchar* str = g_variant_get_string(value, NULL);
 	    hotkey_list_set_from_string(&on_keys, str);
-        } else if (strcmp (name, "off-keys") == 0) {
+        } else if (strcmp (key, "off-keys") == 0) {
             const gchar* str = g_variant_get_string(value, NULL);
 	    hotkey_list_set_from_string(&off_keys, str);
         }
-    } else if (strcmp(section, "panel") == 0) {
-        if (strcmp(name, "lookup-table-orientation") == 0) {
+    } else if (strcmp (schema_id, "org.freedesktop.ibus.panel") == 0) {
+        if (strcmp (key, "lookup-table-orientation") == 0) {
             lookup_table_orientation = g_variant_get_int32(value);
         }
     }
+    g_variant_unref (value);
+    g_value_unset (&schema_value);
 }
 
 static void
