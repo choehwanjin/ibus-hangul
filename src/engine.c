@@ -731,7 +731,7 @@ h_ibus_text_get_substring (IBusText* ibus_text, glong p1, glong p2)
 static HanjaList*
 ibus_hangul_engine_lookup_hanja_table (const char* key, int method)
 {
-    HanjaList* list;
+    HanjaList* list = NULL;
 
     if (key == NULL)
         return NULL;

@@ -132,7 +132,7 @@ main (gint argc, gchar **argv)
 
     context = g_option_context_new ("- ibus hangul engine component");
 
-    g_option_context_add_main_entries (context, entries, "ibus-hangul");
+    g_option_context_add_main_entries (context, entries, GETTEXT_PACKAGE);
 
     if (!g_option_context_parse (context, &argc, &argv, &error)) {
         g_print ("Option parsing failed: %s\n", error->message);
