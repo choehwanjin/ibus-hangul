@@ -67,7 +67,6 @@ class Setup ():
 
         # Hangul tab
         list = get_hangul_keyboard_list()
-        
         self.__hangul_keyboard = self.__builder.get_object("HangulKeyboard")
         model = Gtk.ListStore(str, str, int)
         i = 0
@@ -97,6 +96,10 @@ class Setup ():
         self.__auto_reorder = self.__builder.get_object("AutoReorder")
         auto_reorder = self.__read("auto-reorder").get_boolean()
         self.__auto_reorder.set_active(auto_reorder)
+
+        self.__esc_off_key = self.__builder.get_object("EscOffKey")
+        esc_off_key = self.__read("off-keys").get_string()
+        self.__esc_off_key.set_active(esc_off_key == "Escape")
 
         button = self.__builder.get_object("HangulKeyListAddButton")
         button.connect("clicked", self.on_hangul_key_add, None)
@@ -183,6 +186,12 @@ class Setup ():
 
         auto_reorder = self.__auto_reorder.get_active()
         self.__write("auto-reorder", GLib.Variant.new_boolean(auto_reorder))
+
+        esc_off_key = self.__esc_off_key.get_active()
+        if esc_off_key:
+            self.__write("off-keys", GLib.Variant.new_string("Escape"))
+        else:
+            self.__write("off-keys", GLib.Variant.new_string(""))
 
         model = self.__hangul_key_list.get_model()
         str = ""
