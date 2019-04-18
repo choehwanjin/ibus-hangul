@@ -1590,7 +1590,16 @@ ibus_hangul_engine_reset (IBusEngine *engine)
         ustring_clear (hangul->preedit);
     }
 
+#if IBUS_CHECK_VERSION(1, 5, 20)
+    // ibus-hangul uses
+    // ibus_engine_update_preedit_text_with_mode() function which makes
+    // the preedit string committed automatically when the reset is received
+    // So we don't need to commit the preedit here.
+    hangul_ic_reset (hangul->context);
+    ustring_clear (hangul->preedit);
+#endif
     ibus_hangul_engine_flush (hangul);
+
     IBUS_ENGINE_CLASS (parent_class)->reset (engine);
 }
 
