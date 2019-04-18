@@ -236,6 +236,7 @@ static HanjaTable *hanja_table = NULL;
 static HanjaTable *symbol_table = NULL;
 static GSettings *settings_hangul = NULL;
 static GSettings *settings_panel = NULL;
+static GSettings *settings_general = NULL;
 static GString    *hangul_keyboard = NULL;
 static HotkeyList hanja_keys;
 static HotkeyList switch_keys;
@@ -252,6 +253,11 @@ static int initial_input_mode = INPUT_MODE_LATIN;
  * See: https://github.com/libhangul/ibus-hangul/issues/42
  */
 static gboolean use_event_forwarding = TRUE;
+/**
+ * whether to use client commit
+ * See: https://github.com/libhangul/ibus-hangul/pull/68
+ */
+static gboolean use_client_commit = FALSE;
 
 /**
  * global preedit mode
@@ -268,6 +274,42 @@ ucschar_strlen (const ucschar* str)
     while (*p != 0)
         p++;
     return p - str;
+}
+
+static gboolean
+ibus_hangul_check_ibus_version (const gchar *version,
+                                gint required_major,
+                                gint required_minor,
+                                gint required_micro)
+{
+    gint len = 0;
+    gint major = 0, minor = 0, micro = 0;
+
+    gchar **versions = g_strsplit_set (version, ".", 3);
+    len = g_strv_length (versions);
+    major = atoi (versions[0]);
+    minor = atoi (versions[1]);
+    micro = atoi (versions[2]);
+    g_strfreev (versions);
+    if (len != 3)
+        return FALSE;
+
+    return major > required_major ||
+        (major == required_major && minor > required_minor) ||
+        (major == required_major && minor == required_minor &&
+         micro >= required_micro);
+}
+
+static gboolean
+check_client_commit (const gchar *version)
+{
+    gboolean client_commit = FALSE;
+
+    client_commit = ibus_hangul_check_ibus_version (version, 1, 5, 20);
+
+    g_debug ("client_commit: %d", client_commit);
+
+    return client_commit;
 }
 
 GType
@@ -310,6 +352,7 @@ ibus_hangul_init (IBusBus *bus)
 
     settings_hangul = g_settings_new ("org.freedesktop.ibus.engine.hangul");
     settings_panel = g_settings_new ("org.freedesktop.ibus.panel");
+    settings_general = g_settings_new ("org.freedesktop.ibus.general");
 
     hangul_keyboard = g_string_new_len (NULL, 8);
     value = g_settings_get_value (settings_hangul, "hangul-keyboard");
@@ -413,6 +456,13 @@ ibus_hangul_init (IBusBus *bus)
         g_clear_pointer (&value, g_variant_unref);
     }
 
+    value = g_settings_get_value (settings_general, "version");
+    if (value != NULL) {
+        use_client_commit = check_client_commit
+            (g_variant_get_string (value, NULL));
+        g_clear_pointer (&value, g_variant_unref);
+    }
+
     keymap = ibus_keymap_get("us");
 
     g_debug ("init");
@@ -441,6 +491,7 @@ ibus_hangul_exit (void)
 
     g_clear_object (&settings_hangul);
     g_clear_object (&settings_panel);
+    g_clear_object (&settings_general);
 
     g_string_free (hangul_keyboard, TRUE);
     hangul_keyboard = NULL;
@@ -568,6 +619,8 @@ ibus_hangul_engine_init (IBusHangulEngine *hangul)
     g_signal_connect (settings_hangul, "changed",
                       G_CALLBACK (settings_changed), hangul);
     g_signal_connect (settings_panel, "changed",
+                      G_CALLBACK (settings_changed), hangul);
+    g_signal_connect (settings_general, "changed",
                       G_CALLBACK (settings_changed), hangul);
 
     g_debug ("context new:%u", hangul->id);
@@ -1590,7 +1643,17 @@ ibus_hangul_engine_reset (IBusEngine *engine)
         ustring_clear (hangul->preedit);
     }
 
+    if (use_client_commit) {
+        // ibus-hangul uses
+        // ibus_engine_update_preedit_text_with_mode() function which makes
+        // the preedit string committed automatically when the reset is received
+        // So we don't need to commit the preedit here.
+        hangul_ic_reset (hangul->context);
+        ustring_clear (hangul->preedit);
+    }
+
     ibus_hangul_engine_flush (hangul);
+
     IBUS_ENGINE_CLASS (parent_class)->reset (engine);
 }
 
@@ -1872,6 +1935,12 @@ settings_changed (GSettings    *settings,
     } else if (strcmp (schema_id, "org.freedesktop.ibus.panel") == 0) {
         if (strcmp (key, "lookup-table-orientation") == 0) {
             lookup_table_orientation = g_variant_get_int32(value);
+            print_changed_settings (schema_id, key, value);
+        }
+    } else if (strcmp (schema_id, "org.freedesktop.ibus.general") == 0) {
+        if (strcmp (key, "version") == 0) {
+            use_client_commit = check_client_commit
+                (g_variant_get_string (value, NULL));
             print_changed_settings (schema_id, key, value);
         }
     }
