@@ -231,6 +231,8 @@ static gboolean hotkey_list_has_modifier    (HotkeyList           *list,
 
 static glong ucschar_strlen (const ucschar* str);
 
+static gint ibus_version[3] = { IBUS_MAJOR_VERSION, IBUS_MINOR_VERSION, IBUS_MICRO_VERSION };
+
 static IBusEngineSimpleClass *parent_class = NULL;
 static guint last_context_id = 0;
 static HanjaTable *hanja_table = NULL;
@@ -276,23 +278,69 @@ ucschar_strlen (const ucschar* str)
     return p - str;
 }
 
+static void
+check_ibus_version ()
+{
+    gboolean retval;
+    gchar* standard_output = NULL;
+    const gchar* version_str;
+    gchar** version_str_array;
+    gint version[3];
+
+    retval = g_spawn_command_line_sync ("ibus version", &standard_output,
+                                        NULL, NULL, NULL);
+    if (!retval)
+        goto fail;
+
+    version_str = strpbrk (standard_output, " \t");
+    if (version_str == NULL) {
+        g_free (standard_output);
+        goto fail;
+    }
+
+    while (*version_str == ' ' || *version_str == '\t')
+        version_str++;
+
+    version_str_array = g_strsplit (version_str, ".", 3);
+    g_free (standard_output);
+    if (version_str_array == NULL) {
+        goto fail;
+    }
+
+    version[0] = 0;
+    version[1] = 0;
+    version[2] = 0;
+    for (gint i = 0; version_str_array[i] != NULL; ++i) {
+        version[i] = g_ascii_strtoll (version_str_array[i], NULL, 10);
+    }
+    g_strfreev (version_str_array);
+
+    if (version[0] == 0 && version[1] == 0 && version[2] == 0) {
+        goto fail;
+    }
+
+    ibus_version[0] = version[0];
+    ibus_version[1] = version[1];
+    ibus_version[2] = version[2];
+    g_debug ("ibus version detected: %d.%d.%d",
+            ibus_version[0], ibus_version[1], ibus_version[2]);
+    exit(0);
+    return;
+
+fail:
+    g_debug ("ibus version detection failed: use default value: %d.%d.%d",
+            ibus_version[0], ibus_version[1], ibus_version[2]);
+    exit(-1);
+}
+
 static gboolean
-ibus_hangul_check_ibus_version (const gchar *version,
-                                gint required_major,
+ibus_hangul_check_ibus_version (gint required_major,
                                 gint required_minor,
                                 gint required_micro)
 {
-    gint len = 0;
-    gint major = 0, minor = 0, micro = 0;
-
-    gchar **versions = g_strsplit_set (version, ".", 3);
-    len = g_strv_length (versions);
-    major = atoi (versions[0]);
-    minor = atoi (versions[1]);
-    micro = atoi (versions[2]);
-    g_strfreev (versions);
-    if (len != 3)
-        return FALSE;
+    gint major = ibus_version[0];
+    gint minor = ibus_version[1];
+    gint micro = ibus_version[2];
 
     return major > required_major ||
         (major == required_major && minor > required_minor) ||
@@ -304,19 +352,8 @@ static gboolean
 check_client_commit ()
 {
     gboolean client_commit = FALSE;
-    gboolean retval;
-    gchar *standard_output = NULL;
-    gchar version[256];
 
-    retval = g_spawn_command_line_sync ("ibus version", &standard_output,
-                                        NULL, NULL, NULL);
-    if (!retval)
-        return client_commit;
-
-    sscanf (standard_output, "IBus %255s", version);
-    g_free (standard_output);
-
-    client_commit = ibus_hangul_check_ibus_version (version, 1, 5, 20);
+    client_commit = ibus_hangul_check_ibus_version (1, 5, 20);
 
     g_debug ("client_commit: %d", client_commit);
 
@@ -360,6 +397,8 @@ ibus_hangul_init (IBusBus *bus)
     hanja_table = hanja_table_load (NULL);
 
     symbol_table = hanja_table_load (IBUSHANGUL_DATADIR "/data/symbol.txt");
+
+    check_ibus_version ();
 
     settings_hangul = g_settings_new ("org.freedesktop.ibus.engine.hangul");
     settings_panel = g_settings_new ("org.freedesktop.ibus.panel");
