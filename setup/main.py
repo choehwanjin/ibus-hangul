@@ -67,7 +67,7 @@ class Setup ():
 
         # Hangul tab
         list = get_hangul_keyboard_list()
-        
+
         self.__hangul_keyboard = self.__builder.get_object("HangulKeyboard")
         model = Gtk.ListStore(str, str, int)
         i = 0
@@ -144,8 +144,49 @@ class Setup ():
         self.__hanja_key_list.append_column(column)
 
         # advanced tab
-        notebook = self.__builder.get_object("SetupNotebook")
-        notebook.remove_page(2)
+        button = self.__builder.get_object("OffKeyListAddButton")
+        button.connect("clicked", self.on_off_key_add, None)
+
+        button = self.__builder.get_object("OffKeyListRemoveButton")
+        button.connect("clicked", self.on_off_key_remove, None)
+
+        model = Gtk.ListStore(str)
+
+        keylist_str = self.__read("off-keys").get_string()
+        self.__off_key_list_str = keylist_str.split(',')
+        for i in self.__off_key_list_str:
+            model.append([i])
+
+        self.__off_key_list = self.__builder.get_object("OffKeyList")
+        self.__off_key_list.set_model(model)
+        column = Gtk.TreeViewColumn()
+        column.set_title("key")
+        renderer = Gtk.CellRendererText()
+        column.pack_start(renderer, True)
+        column.add_attribute(renderer, "text", 0)
+        self.__off_key_list.append_column(column)
+
+        button = self.__builder.get_object("OnKeyListAddButton")
+        button.connect("clicked", self.on_on_key_add, None)
+
+        button = self.__builder.get_object("OnKeyListRemoveButton")
+        button.connect("clicked", self.on_on_key_remove, None)
+
+        model = Gtk.ListStore(str)
+
+        keylist_str = self.__read("on-keys").get_string()
+        self.__on_key_list_str = keylist_str.split(',')
+        for i in self.__on_key_list_str:
+            model.append([i])
+
+        self.__on_key_list = self.__builder.get_object("OnKeyList")
+        self.__on_key_list.set_model(model)
+        column = Gtk.TreeViewColumn()
+        column.set_title("key")
+        renderer = Gtk.CellRendererText()
+        column.pack_start(renderer, True)
+        column.add_attribute(renderer, "text", 0)
+        self.__on_key_list.append_column(column)
 
         # setup dialog
         self.__window = self.__builder.get_object("SetupDialog")
@@ -207,6 +248,30 @@ class Setup ():
                 str += model.get_value(iter, 0)
             iter = model.iter_next(iter)
         self.__write("hanja-keys", GLib.Variant.new_string(str))
+
+        model = self.__off_key_list.get_model()
+        str = ""
+        iter = model.get_iter_first()
+        while iter:
+            if len(str) > 0:
+                str += ","
+                str += model.get_value(iter, 0)
+            else:
+                str += model.get_value(iter, 0)
+            iter = model.iter_next(iter)
+        self.__write("off-keys", GLib.Variant.new_string(str))
+
+        model = self.__on_key_list.get_model()
+        str = ""
+        iter = model.get_iter_first()
+        while iter:
+            if len(str) > 0:
+                str += ","
+                str += model.get_value(iter, 0)
+            else:
+                str += model.get_value(iter, 0)
+            iter = model.iter_next(iter)
+        self.__write("on-keys", GLib.Variant.new_string(str))
 
     def on_apply(self, widget, data):
         self.apply()
@@ -270,6 +335,60 @@ class Setup ():
 
     def on_hanja_key_remove(self, widget, data = None):
         selection = self.__hanja_key_list.get_selection()
+        (model, iter) = selection.get_selected()
+        if model and iter:
+            model.remove(iter)
+
+    def on_off_key_add(self, widget, data = None):
+        dialog = KeyCaptureDialog(_("Select Off key"), self.__window)
+        dialog.set_markup(_("Press any key which you want to use as off key. "
+                "The key you pressed is displayed below.\n"
+                "If you want to use it, click \"Ok\" or click \"Cancel\""))
+        res = dialog.run()
+        if res == Gtk.ResponseType.OK:
+            key_str = dialog.get_key_string()
+            if len(key_str) > 0:
+                model = self.__off_key_list.get_model()
+                iter = model.get_iter_first()
+                while iter:
+                    str = model.get_value(iter, 0)
+                    if str == key_str:
+                        model.remove(iter)
+                        break
+                    iter = model.iter_next(iter)
+
+                model.append([key_str])
+        dialog.destroy()
+
+    def on_off_key_remove(self, widget, data = None):
+        selection = self.__off_key_list.get_selection()
+        (model, iter) = selection.get_selected()
+        if model and iter:
+            model.remove(iter)
+
+    def on_on_key_add(self, widget, data = None):
+        dialog = KeyCaptureDialog(_("Select On key"), self.__window)
+        dialog.set_markup(_("Press any key which you want to use as on key. "
+                "The key you pressed is displayed below.\n"
+                "If you want to use it, click \"Ok\" or click \"Cancel\""))
+        res = dialog.run()
+        if res == Gtk.ResponseType.OK:
+            key_str = dialog.get_key_string()
+            if len(key_str) > 0:
+                model = self.__on_key_list.get_model()
+                iter = model.get_iter_first()
+                while iter:
+                    str = model.get_value(iter, 0)
+                    if str == key_str:
+                        model.remove(iter)
+                        break
+                    iter = model.iter_next(iter)
+
+                model.append([key_str])
+        dialog.destroy()
+
+    def on_on_key_remove(self, widget, data = None):
+        selection = self.__on_key_list.get_selection()
         (model, iter) = selection.get_selected()
         if model and iter:
             model.remove(iter)
