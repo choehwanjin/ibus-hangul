@@ -88,12 +88,14 @@ install(FILES icons/ibus-hangul.svg DESTINATION ${DATADIR}/icons/hicolor/scalabl
 
 # setup
 install(PROGRAMS ${CMAKE_BINARY_DIR}/setup/ibus-setup-hangul DESTINATION ${LIBEXECDIR})
-install(FILES ${CMAKE_BINARY_DIR}/setup/ibus-setup-hangul.desktop
-    DESTINATION ${DATADIR}/applications/)
+install(DIRECTORY DESTINATION ${CMAKE_INSTALL_FULL_BINDIR})
+install(CODE "execute_process(COMMAND bash -c \"
+    ln -sf ../${CMAKE_INSTALL_LIBEXECDIR}/ibus-setup-hangul \
+    $DESTDIR${CMAKE_INSTALL_FULL_BINDIR}/ibus-setup-hangul \")")
+install(FILES ${CMAKE_BINARY_DIR}/setup/ibus-setup-hangul.desktop DESTINATION ${DATADIR}/applications/)
 install(FILES setup/ibus-setup-hangul.png setup/ibus-setup-hangul.svg DESTINATION ${PKGDATADIR}/icons/)
 install(FILES setup/ibus-setup-hangul.png DESTINATION ${DATADIR}/icons/hicolor/64x64/apps/)
 install(FILES setup/ibus-setup-hangul.svg DESTINATION ${DATADIR}/icons/hicolor/scalable/apps/)
 install(FILES setup/main.py setup/keycapturedialog.py setup/setup.ui
     ${CMAKE_BINARY_DIR}/setup/config.py
     DESTINATION ${DATADIR}/ibus-hangul/setup/)
-# LATER - symmlink and pycomile
