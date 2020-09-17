@@ -286,6 +286,7 @@ check_ibus_version ()
     const gchar* version_str;
     gchar** version_str_array;
     gint version[3];
+    gint i;
 
     retval = g_spawn_command_line_sync ("ibus version", &standard_output,
                                         NULL, NULL, NULL);
@@ -310,7 +311,7 @@ check_ibus_version ()
     version[0] = 0;
     version[1] = 0;
     version[2] = 0;
-    for (gint i = 0; version_str_array[i] != NULL; ++i) {
+    for (i = 0; version_str_array[i] != NULL; ++i) {
         version[i] = g_ascii_strtoll (version_str_array[i], NULL, 10);
     }
     g_strfreev (version_str_array);
